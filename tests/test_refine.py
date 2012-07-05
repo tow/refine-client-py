@@ -55,6 +55,9 @@ class RefineTest(refinetest.RefineTestCase):
         self.assertTrue('email' in self.project.column_order)
         self.assertEqual(self.project.column_order['name'], 1)
 
+    def test_get_operations(self):
+        self.assertEqual([], self.project.get_operations())
+
     def test_delete_project(self):
         self.assertTrue(self.project.delete())
 
