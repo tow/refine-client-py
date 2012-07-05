@@ -422,8 +422,11 @@ class RefineProject:
         return self.do_json('get-history', include_engine=False)
 
     def apply_operations(self, file_path, wait=True):
-        json_data = open(file_path).read()
-        response_json = self.do_json('apply-operations', {'operations': json_data})
+        json = open(file_path).read()
+        self.apply_operations_json(json, wait)
+
+    def apply_operations_json(self, json, wait=True):
+        response_json = self.do_json('apply-operations', {'operations': json})
         if response_json['code'] == 'pending' and wait:
             self.wait_until_idle()
             return 'ok'
