@@ -76,8 +76,9 @@ class RefineServer(object):
             url += '?' + urllib.urlencode(params)
         req = urllib2.Request(url)
         if data:
-            req.add_data(data)  # data = urllib.urlencode(data)
-        #req.add_header('Accept-Encoding', 'gzip')
+            data = urllib.urlencode(data)
+            req.add_data(data)
+            #req.add_header('Accept-Encoding', 'gzip')
         try:
             response = urllib2.urlopen(req)
         except urllib2.HTTPError as e:
@@ -444,6 +445,14 @@ class RefineProject:
     def delete(self):
         response_json = self.do_json('delete-project', include_engine=False)
         return 'code' in response_json and response_json['code'] == 'ok'
+
+    def undo_redo(self, op_id):
+        self.server.urlopen(
+            'undo-redo',
+            params={'lastDoneID': op_id},
+            data={'facets': []},
+            project_id=self.project_id
+        )
 
     def compute_facets(self, facets=None):
         """Compute facets as per the project's engine.
