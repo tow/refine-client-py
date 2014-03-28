@@ -403,9 +403,6 @@ class RefineProject:
         response = self.do_json('get-processes', include_engine=False)
         return response['processes']
 
-    def undo_redo(self, lastDoneID):
-        return self.do_json('undo-redo', {'lastDoneID': lastDoneID})
-
     def get_history(self):
         return self.do_json('get-history', include_engine=False)
 
