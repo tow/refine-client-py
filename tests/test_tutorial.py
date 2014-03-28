@@ -194,9 +194,9 @@ class TutorialTestEditing(refinetest.RefineTestCase):
         # {5}, {6}, {7}
         response = self.project.compute_facets(facet.StarredFacet(True))
         self.assertEqual(len(response.facets[0].choices), 2)    # true & false
-        self.assertEqual(response.facets[0].choices[True].count, 3)
+        self.assertEqual(response.facets[0].choices[True].count, 2)
         self.project.remove_rows()
-        self.assertInResponse('3 rows')
+        self.assertInResponse('2 rows')
 
 
 class TutorialTestDuplicateDetection(refinetest.RefineTestCase):
