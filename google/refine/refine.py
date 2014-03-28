@@ -407,6 +407,16 @@ class RefineProject:
             else:
                 return
 
+    def get_processes(self):
+        response = self.do_json('get-processes', include_engine=False)
+        return response['processes']
+
+    def undo_redo(self, lastDoneID):
+        return self.do_json('undo-redo', {'lastDoneID': lastDoneID})
+
+    def get_history(self):
+        return self.do_json('get-history', include_engine=False)
+
     def apply_operations(self, file_path, wait=True):
         json_data = open(file_path).read()
         response_json = self.do_json('apply-operations', {'operations': json_data})
@@ -555,6 +565,11 @@ class RefineProject:
     def rename_column(self, column, new_column):
         response = self.do_json('rename-column', {'oldColumnName': column,
                                                   'newColumnName': new_column})
+        self.get_models()
+        return response
+
+    def remove_column(self, column):
+        response = self.do_json('remove-column', {'columnName': column})
         self.get_models()
         return response
 
