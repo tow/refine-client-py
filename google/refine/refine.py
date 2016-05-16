@@ -71,9 +71,8 @@ class RefineServer(object):
                 data['project'] = project_id
             else:
                 params['project'] = project_id
-        #req = urllib2.Request(url)
         try:
-            if data:
+            if data or files:
                 response = requests.post(url, data=data, files=files,
                                          params=params, stream=True)
             else:
@@ -211,6 +210,7 @@ class Refine:
                     process_quotes=True,
                     store_blank_cells_as_nulls=True,
                     include_file_sources=False,
+                    record_path=None,
                     **opts):
 
         if (project_file and project_url) or (not project_file and not project_url):
@@ -226,15 +226,16 @@ class Refine:
             'format': project_format,
             'encoding': s(encoding),
             'separator': s(separator),
-            'ignore-lines': s(ignore_lines),
-            'header-lines': s(header_lines),
-            'skip-data-lines': s(skip_data_lines),
+            'ignoreLines': s(ignore_lines),
+            'headerLines': s(header_lines),
+            'skipDataLines': s(skip_data_lines),
             'limit': s(limit),
-            'guess-value-type': s(guess_cell_value_types),
-            'process-quotes': s(process_quotes),
-            'store-blank-rows': s(store_blank_rows),
-            'store-blank-cells-as-nulls': s(store_blank_cells_as_nulls),
-            'include-file-sources': s(include_file_sources),
+            'guessValueType': s(guess_cell_value_types),
+            'processQuotes': s(process_quotes),
+            'storeBlankRows': s(store_blank_rows),
+            'storeBlankCellsAsNulls': s(store_blank_cells_as_nulls),
+            'includeFileSources': s(include_file_sources),
+            'recordPath': record_path or "",
         }
         files = None
         if project_url is not None:
@@ -245,16 +246,37 @@ class Refine:
             # make a name for itself by stripping extension and directories
             project_name = (project_file or 'New project').rsplit('.', 1)[0]
             project_name = os.path.basename(project_name)
-        options['project-name'] = project_name
-        response = self.server.urlopen('create-project-from-upload', options, files=files)
-        # expecting a redirect to the new project containing the id in the url
-        url_params = urlparse.parse_qs(
-            urlparse.urlparse(response.url).query)
-        if 'project' in url_params:
-            project_id = url_params['project'][0]
-            return RefineProject(self.server, project_id)
-        else:
-            raise Exception('Project not created')
+        options['projectName'] = project_name
+        options.update(opts)
+        response = self.server.urlopen('create-importing-job', data="{}") # data included to force POST
+        jobID = json.loads(response.text)['jobID']
+        response = self.server.urlopen("importing-controller",
+            params={"controller": "core/default-importing-controller",
+                    "jobID": jobID,
+                    "subCommand": "load-raw-data"},
+            files=files)
+        response = self.server.urlopen("importing-controller",
+            params={"controller":"core/default-importing-controller",
+                    "jobID": jobID,
+                    "subCommand": "create-project"},
+            data={"format": "text/xml",
+                  "options": json.dumps(options)})
+        if json.loads(response.text) != {"status": "ok", "message": "done"}:
+            print response
+            print response.url
+            print response.text
+            raise Exception("Could not understand project creation status")
+        while True:
+            time.sleep(1)
+            response = self.server.urlopen('get-importing-job-status', params={"jobID": jobID}, data="{}") # data included to force POST
+            # don't bother trying to try/catch, just raise the exception in place
+            job_config = json.loads(response.text)['job']['config']
+            try:
+                project_id = job_config['projectID']
+                break
+            except KeyError:
+                continue
+        return RefineProject(self.server, unicode(project_id))
 
 
 def RowsResponseFactory(column_index):
