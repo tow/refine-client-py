@@ -266,16 +266,21 @@ class Refine:
             print response.url
             print response.text
             raise Exception("Could not understand project creation status")
-        while True:
+        for wait in range(100):
             time.sleep(1)
             response = self.server.urlopen('get-importing-job-status', params={"jobID": jobID}, data="{}") # data included to force POST
             # don't bother trying to try/catch, just raise the exception in place
             job_config = json.loads(response.text)['job']['config']
+            progress = job_config['progress']['percent']
+            if progress < 100:
+                continue
             try:
                 project_id = job_config['projectID']
                 break
             except KeyError:
-                continue
+                raise Exception("Import failed")
+        else:
+            raise Exception("Import failed")
         return RefineProject(self.server, unicode(project_id))
 
 
